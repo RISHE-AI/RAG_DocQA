@@ -1,0 +1,424 @@
+PDF CODE
+
+for page_num, page in enumerate(pdf_reader.pages):
+
+
+First: page_num = 0, page = <page object>
+Second: page_num = 1, page = <page object>
+Third: page_num = 2, page = <page object>
+
+
+================================================================================
+page_text = page.extract_text()
+
+Page 1: page_text = "Introduction\nThis document covers basic concepts..."
+Page 2: page_text = "Chapter 1\nHere we discuss the main topics..."
+Page 3: page_text = "Conclusion\nIn summary, we have learned..."
+
+
+================================================================================
+
+
+
+page_texts.append({
+    'text': page_text,
+    'page_number': page_num + 1
+})
+
+page_texts = [
+    {'text': 'Introduction\nThis document covers basic concepts...', 'page_number': 1},
+    {'text': 'Chapter 1\nHere we discuss the main topics...', 'page_number': 2},
+    {'text': 'Conclusion\nIn summary, we have learned...', 'page_number': 3}
+]
+
+
+
+
+================================================================================
+
+text = ''.join([p['text'] for p in page_texts])
+
+text = "Introduction\nThis document covers basic concepts...Chapter 1\nHere we discuss the main topics...Conclusion\nIn summary, we have learned..."
+
+
+
+
+================================================================================
+
+
+chunks = []
+chunk_metadata = []
+
+Initial values: chunks = [], chunk_metadata = []
+
+
+
+
+
+for i in range(0, len(text), 400):
+Loop iterations: i = 0, 400, 800, 1200 (assuming 1200 character text)
+
+
+================================================================================
+
+
+chunk_text = text[i:i + 500]
+
+
+for i in range(0, len(text), 400):  # range(0, 1200, 400)  in our case its 84,006
+    chunk_text = text[i:i + 500]
+
+i = 0
+chunk_text = text[0:500]  # First 500 A's
+chunk_text = "AAAAA..." (500 characters)
+
+i = 400  
+chunk_text = text[400:900]  # Characters 400-899 (500 A's)
+chunk_text = "AAAAA..." (500 characters, overlaps with previous chunk's last 100 chars)
+
+i = 800
+chunk_text = text[800:1300]  # Characters 800-1199 (400 A's, hits end of text)
+chunk_text = "AAAAA..." (400 characters)	
+
+etc 
+
+================================================================================
+
+
+chunks.append(chunk_text)
+chunks = [
+    "Introduction\nThis document covers basic concepts...Chapter 1\nHere we dis",
+    "cuss the main topics...Conclusion\nIn summary, we have learned about...",
+    "learned about various concepts and methods that will help us in...",
+    "conclusion and final thoughts on the subject matter."
+]
+
+
+================================================================================
+
+
+estimated_page = min((i // (len(text) // total_pages)) + 1, total_pages)
+
+len(text) // total_pages = 84,500 // 103 = ~820 characters per page
+
+i = 0  # First chunk starts at position 0
+
+Chunk 1 (i = 0):
+
+Step by step:
+i // (len(text) // total_pages) = 0 // 820 = 0
+(0) + 1 = 1
+min(1, 103) = 1
+
+estimated_page = 1 ✅ (First page)
+
+
+i = 400  # Second chunk starts at position 400
+
+Chunk 2 (i = 400):
+
+Step by step:
+i // (len(text) // total_pages) = 400 // 820 = 0
+(0) + 1 = 1
+min(1, 103) = 1
+
+estimated_page = 1 ✅ (Still on first page)
+
+Chunk 4 (i = 1200):
+
+i = 1200  # Fourth chunk starts at position 1200
+
+Step by step:
+i // (len(text) // total_pages) = 1200 // 820 = 1
+(1) + 1 = 2
+min(2, 103) = 2
+
+estimated_page = 2 ✅ (Now on second page)
+
+================================================================================
+chunk_metadata.append({
+    'start_pos': i,
+    'estimated_page': estimated_page
+})
+
+chunk_metadata = [
+    {'start_pos': 0, 'estimated_page': 1},
+    {'start_pos': 400, 'estimated_page': 2},
+    {'start_pos': 800, 'estimated_page': 3},
+    {'start_pos': 1200, 'estimated_page': 3}
+]
+
+
+================================================================================
+
+
+
+ embeddings = []
+    for i, chunk in enumerate(chunks):
+        print(f"Processing {i + 1}/{len(chunks)}")
+        response = openai.Embedding.create(input=chunk, model="text-embedding-ada-002")
+        embeddings.append(response['data'][0]['embedding'])
+
+enumerate(chunks)
+
+chunks = ["Hello world", "This is chunk 2", "Final chunk"]
+
+# enumerate gives:
+# i=0, chunk="Hello world"
+# i=1, chunk="This is chunk 2"  
+# i=2, chunk="Final chunk"
+
+
+for i, chunk in enumerate(chunks):
+
+1st loop: i=0, chunk="Hello world"
+2nd loop: i=1, chunk="This is chunk 2"
+3rd loop: i=2, chunk="Final chunk"
+
+
+
+print(f"Processing {i + 1}/{len(chunks)}")
+
+  i + 1 because counting starts from 0, but we want to show 1, 2, 3...
+  len(chunks) shows total number of chunks
+
+Processing 1/211
+Processing 2/211
+Processing 3/211
+...
+Processing 211/211
+
+
+response = openai.Embedding.create(input=chunk, model="text-embedding-ada-002")
+
+response = {
+    'data': [
+        {
+            'embedding': [0.123, -0.456, 0.789, ..., 0.345],  # 1536 numbers
+            'index': 0
+        }
+    ],
+    'model': 'text-embedding-ada-002',
+    'usage': {'prompt_tokens': 10, 'total_tokens': 10}
+}
+
+
+
+embeddings.append(response['data'][0]['embedding'])
+
+response['data'] → Gets the data part
+response['data'][0] → Gets the first (and only) result
+response['data'][0]['embedding'] → Gets the actual 1536 numbers
+embeddings.append(...) → Adds these numbers to our list
+
+
+Loop 1:
+  chunk = "The company was founded in 1995..."
+  → Send to OpenAI
+  → Get back: [0.123, -0.456, 0.789, ...]
+  → Add to embeddings list
+
+Loop 2:  
+  chunk = "...1995 by John Smith. It started..."
+  → Send to OpenAI  
+  → Get back: [0.567, 0.234, -0.123, ...]
+  → Add to embeddings list
+
+Loop 3:
+  chunk = "...started as small startup with..."
+  → Send to OpenAI
+  → Get back: [0.891, -0.678, 0.345, ...]
+  → Add to embeddings list
+================================================================================
+  
+ Final Result:
+pythonembeddings = [
+    [0.123, -0.456, 0.789, ...],  # Vector for chunk 1
+    [0.567, 0.234, -0.123, ...],  # Vector for chunk 2  
+    [0.891, -0.678, 0.345, ...],  # Vector for chunk 3
+    # ... 211 total vectors
+]
+
+
+================================================================================
+
+
+
+
+
+
+chunks.pkl
+
+chunks = [
+    "The company was founded in 1995 by John Smith and started as a small startup...",
+    "...startup with 5 employees. In 2000, the company expanded to Europe and...",
+    "...Europe and hired 50 more people. By 2010, it became a multinational...",
+    # ... 211 total chunks
+]
+
+.pkl = Pickle file format
+
+Pickle is Python's way to save objects to files
+It's like "freezing" your Python data and saving it to disk
+Later, you can "unfreeze" it back to the original format
+
+
+================================================================================
+vectors.index file contains:
+├── Index metadata (type, dimensions, etc.)
+├── Vector 1: [0.123, -0.456, 0.789, ..., 0.321]  # 1536 numbers
+├── Vector 2: [0.234, -0.567, 0.890, ..., 0.432]  # 1536 numbers  
+├── Vector 3: [0.345, -0.678, 0.901, ..., 0.543]  # 1536 numbers
+└── ... (one vector per chunk)
+
+================================================================================
+
+
+
+
+
+
+
+
+
+
+
+================================================================================
+Question and Answer code
+
+query_vector = np.array(response['data'][0]['embedding']).reshape(1, -1)
+
+# Original shape: (1536,) - just a list of 1536 numbers
+[0.234, -0.567, 0.123, ..., 0.456]
+
+# After reshape(1, -1): (1, 1536) - one row with 1536 columns  
+[[0.234, -0.567, 0.123, ..., 0.456]]
+================================================================================
+
+scores, indices = index.search(query_vector.astype('float32'), 3)
+
+query_vector.astype('float32') → Convert to FAISS-friendly format
+index.search(..., 3) → Find 3 most similar vectors  = indices = [[45, 123, 67]]  
+
+scores = [[0.234, 0.456, 0.789]]
+indices = [[1, 3, 0]]  
+
+# If we searched 2 questions at once:
+query_vectors = [
+    [0.123, -0.456, ...],  # "What is machine learning?" 
+    [0.234, -0.567, ...]   # "What is deep learning?"
+]
+
+# Results would be:
+scores = [
+    [0.234, 0.456, 0.789],  # Scores for query 2
+    [0.123, 0.345, 0.678]   # Scores for query 1  
+]
+
+
+indices = [
+    [1, 3, 0],              # Best chunks for query 2
+    [2, 4, 1]               # Best chunks for query 1
+]
+
+================================================================================
+
+
+chunks = [
+    "Introduction to AI...",           # Index 0 ← 3rd most similar
+    "Machine learning is...",          # Index 1 ← Most similar
+    "Deep learning uses...",           # Index 2 ← Not in top 3
+    "ML algorithms include...",        # Index 3 ← 2nd most similar
+    "Conclusion summary..."            # Index 4 ← Not in top 3
+]
+
+indices = [[1, 3, 0]]  # Means: chunk 1 (best), chunk 3 (2nd), chunk 0 (3rd)
+
+
+================================================================================
+
+ print(f"🔍 Found {len(indices[0])} relevant chunks:")
+        for i, (score, idx) in enumerate(zip(scores[0], indices[0])):
+		
+Explanation:
+
+scores[0] = [0.234, 0.456, 0.789]
+indices[0] = [1, 3, 0]
+zip() pairs them: [(0.234, 1), (0.456, 3), (0.789, 0)]
+enumerate() adds counter: [(0, (0.234, 1)), (1, (0.456, 3)), (2, (0.789, 0))]
+
+Loop iterations:
+
+i=0: score=0.234, idx=1
+i=1: score=0.456, idx=3
+i=2: score=0.789, idx=0
+
+
+================================================================================
+
+page_num = metadata[idx]['estimated_page']
+
+i=0: idx=1 → page_num = metadata[1]['estimated_page'] = 2
+i=1: idx=3 → page_num = metadata[3]['estimated_page'] = 3
+i=2: idx=0 → page_num = metadata[0]['estimated_page'] = 1
+
+print(f"   Chunk {i + 1}: Score {score:.3f} (≈Page {page_num})")
+
+Chunk 1: Score 0.234 (≈Page 2)
+Chunk 2: Score 0.456 (≈Page 3)  
+Chunk 3: Score 0.789 (≈Page 1)
+
+================================================================================
+
+
+for idx in indices[0]:
+
+Iterations: idx = 1, 3, 0 (from indices[0] = [1, 3, 0])
+
+
+
+================================================================================
+
+
+
+
+chunk_text = chunks[idx]
+page_num = metadata[idx]['estimated_page']
+
+idx=1:
+
+chunk_text = "Machine learning is a subset of AI that..."
+page_num = 2
+
+
+idx=3:
+
+chunk_text = "Machine learning algorithms include supervised..."
+page_num = 3
+
+
+idx=0:
+
+chunk_text = "Introduction to AI and basic concepts..."
+page_num = 1
+
+================================================================================
+
+context_parts.append(f"[Page {page_num}]: {chunk_text}")
+
+context_parts = [
+    "[Page 2]: Machine learning is a subset of AI that...",
+    "[Page 3]: Machine learning algorithms include supervised...", 
+    "[Page 1]: Introduction to AI and basic concepts..."
+]
+
+
+
+context = '\n\n'.join(context_parts)
+
+context = """[Page 2]: Machine learning is a subset of AI that...
+
+[Page 3]: Machine learning algorithms include supervised...
+
+[Page 1]: Introduction to AI and basic concepts..."""
+================================================================================
