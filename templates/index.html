@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAG DocQA Studio — Intelligent Document Intelligence</title>
+  <meta name="description" content="Production-grade AI document question answering system with FAISS semantic retrieval and exact page citations.">
+
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Highlight.js for code syntax styling -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11/styles/atom-one-dark.min.css">
+
+  <!-- Application Stylesheet -->
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <!-- Main Application Wrapper -->
+  <div class="app-layout">
+    
+    <!-- Top Navigation Header -->
+    <header class="navbar">
+      <div class="nav-brand">
+        <div class="brand-logo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+          <span class="logo-glow"></span>
+        </div>
+        <div class="brand-text">
+          <div class="brand-title">
+            <span>DocQA</span> Studio
+            <span class="badge-pro">PRO 2.0</span>
+          </div>
+          <span class="brand-sub">Neural RAG & Citations Engine</span>
+        </div>
+      </div>
+
+      <div class="nav-center">
+        <!-- Model Selector Dropdown -->
+        <div class="model-picker-wrapper" id="modelPickerWrapper">
+          <button type="button" class="model-picker-btn" id="modelPickerBtn" title="Switch AI Model">
+            <span class="model-sparkle">✨</span>
+            <span class="model-label" id="currentModelLabel">Loading model…</span>
+            <svg class="chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <div class="model-dropdown-menu" id="modelDropdownMenu">
+            <div class="dropdown-header">Available Groq Inference Models</div>
+            <div class="model-list" id="modelList">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Telemetry Badges -->
+        <div class="nav-telemetry">
+          <div class="telemetry-pill" id="groqStatusPill">
+            <span class="status-dot"></span>
+            <span class="pill-text">Groq: Connecting…</span>
+          </div>
+          <div class="telemetry-pill" id="faissStatusPill">
+            <span class="status-dot"></span>
+            <span class="pill-text">FAISS: 384-dim</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="nav-actions">
+        <button type="button" class="btn-ghost" id="exportChatBtn" title="Export conversation transcript">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          <span>Export</span>
+        </button>
+
+        <button type="button" class="btn-ghost" id="clearChatBtn" title="Clear current conversation messages">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          </svg>
+          <span>Clear Chat</span>
+        </button>
+
+        <button type="button" class="btn-icon" id="sidebarToggleBtn" title="Toggle Sidebar">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            <line x1="9" y1="3" x2="9" y2="21"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Workspace Body -->
+    <div class="app-workspace">
+      
+      <!-- Left Sidebar: Document Management & Hub -->
+      <aside class="sidebar" id="appSidebar">
+        
+        <!-- Upload Card -->
+        <div class="sidebar-card upload-card">
+          <div class="card-title-row">
+            <span class="card-icon">📂</span>
+            <h3>Document Hub</h3>
+            <span class="format-tags">PDF • TXT • MD</span>
+          </div>
+
+          <div class="dropzone" id="dropzone">
+            <input type="file" id="fileInput" accept=".pdf,.txt,.md" hidden>
+            <div class="dropzone-body">
+              <div class="upload-icon-circle">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+              </div>
+              <p class="dropzone-main">Choose or drop document</p>
+              <p class="dropzone-sub">Semantic vectors generated locally</p>
+            </div>
+            
+            <!-- Progress Bar -->
+            <div class="upload-progress-container" id="uploadProgressContainer">
+              <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+              </div>
+              <div class="progress-meta">
+                <span class="progress-stage" id="progressStage">Extracting text…</span>
+                <span class="progress-percent" id="progressPercent">0%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Active Document Details Card -->
+        <div class="sidebar-card doc-details-card" id="docDetailsCard">
+          <div class="card-title-row">
+            <span class="card-icon">📄</span>
+            <h3>Active Document</h3>
+            <span class="badge-status" id="docStatusBadge">Not Loaded</span>
+          </div>
+
+          <div class="doc-meta-container" id="docMetaContainer">
+            <div class="empty-doc-placeholder">
+              <div class="placeholder-icon">📑</div>
+              <p>No document loaded</p>
+              <span>Upload a file above to start questioning</span>
+            </div>
+          </div>
+
+          <div class="doc-card-actions" id="docCardActions" style="display: none;">
+            <button type="button" class="btn-danger-outline" id="clearDocBtn">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+              </svg>
+              <span>Clear Document</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Smart Prompt Suggestions -->
+        <div class="sidebar-card prompts-card">
+          <div class="card-title-row">
+            <span class="card-icon">⚡</span>
+            <h3>Quick Prompts</h3>
+          </div>
+          <div class="quick-prompts-list">
+            <button type="button" class="prompt-chip" data-question="Provide a high-level executive summary of this document, including its primary objectives and conclusions.">
+              <span class="chip-emoji">📋</span>
+              <span>Executive Summary</span>
+            </button>
+            <button type="button" class="prompt-chip" data-question="What are the key technical findings, results, and quantitative data reported in this document?">
+              <span class="chip-emoji">📊</span>
+              <span>Key Data & Results</span>
+            </button>
+            <button type="button" class="prompt-chip" data-question="What methodology, materials, or procedural steps were used according to the document?">
+              <span class="chip-emoji">🔬</span>
+              <span>Methodology & Steps</span>
+            </button>
+            <button type="button" class="prompt-chip" data-question="List the major limitations, risks, or challenges noted in this document.">
+              <span class="chip-emoji">⚠️</span>
+              <span>Risks & Limitations</span>
+            </button>
+            <button type="button" class="prompt-chip" data-question="What actionable recommendations or next steps are concluded from this document?">
+              <span class="chip-emoji">🚀</span>
+              <span>Action Items</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- System Architecture Widget -->
+        <div class="sidebar-footer-widget">
+          <div class="widget-row">
+            <span class="widget-label">Embedding:</span>
+            <span class="widget-val">all-MiniLM-L6-v2</span>
+          </div>
+          <div class="widget-row">
+            <span class="widget-label">Vector Index:</span>
+            <span class="widget-val">FAISS FlatIP (Normalized)</span>
+          </div>
+          <div class="widget-row">
+            <span class="widget-label">Grounding:</span>
+            <span class="widget-val highlight">Strict (Zero Hallucination)</span>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Center & Right: Chat & Conversation Canvas -->
+      <main class="chat-canvas">
+        
+        <!-- Messages Scroll Container -->
+        <div class="messages-viewport" id="messagesViewport">
+          
+          <!-- Welcome Hero Screen -->
+          <div class="welcome-hero" id="welcomeHero">
+            <div class="hero-badge">
+              <span class="pulse-indicator"></span>
+              Enterprise RAG Intelligence
+            </div>
+            
+            <h1 class="hero-title">
+              Chat with your documents with <span class="gradient-text">verified citations</span>.
+            </h1>
+            
+            <p class="hero-desc">
+              Upload PDF reports, research papers, technical manuals, or study notes. Ask questions to get structured, accurate answers strictly grounded in the document text with exact page numbers.
+            </p>
+
+            <div class="features-grid">
+              <div class="feature-card">
+                <div class="feature-icon">🎯</div>
+                <h4>Zero Hallucinations</h4>
+                <p>Answers synthesized exclusively from your document excerpts with strict provenance.</p>
+              </div>
+              <div class="feature-card">
+                <div class="feature-icon">📑</div>
+                <h4>Exact Page Citations</h4>
+                <p>Interactive page badges link directly to the source passages used for every conclusion.</p>
+              </div>
+              <div class="feature-card">
+                <div class="feature-icon">⚡</div>
+                <h4>Sub-20ms FAISS Search</h4>
+                <p>High-dimensional semantic cosine search encoded locally via sentence-transformers.</p>
+              </div>
+            </div>
+
+            <div class="quick-start-banner">
+              <div class="step-badge">1</div>
+              <span>Upload a document on the left sidebar to unlock interactive question answering.</span>
+            </div>
+          </div>
+
+          <!-- Dynamic Chat Message Stream -->
+          <div class="chat-stream" id="chatStream"></div>
+        </div>
+
+        <!-- Scroll To Bottom Floating Button -->
+        <button type="button" class="scroll-bottom-btn" id="scrollBottomBtn" title="Scroll to latest message">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+
+        <!-- Chat Input Footer -->
+        <footer class="chat-footer">
+          <div class="input-card">
+            <form id="chatForm" class="chat-form">
+              <div class="input-wrapper">
+                <button type="button" class="btn-attach" id="attachBtn" title="Upload Document">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                  </svg>
+                </button>
+
+                <textarea
+                  id="questionInput"
+                  rows="1"
+                  placeholder="Ask any question about your document… (e.g., 'Summarize chapter 2 with key takeaways')"
+                  autocomplete="off"
+                ></textarea>
+
+                <button type="submit" class="btn-send" id="sendBtn" title="Send Question (Enter)">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="22" y1="2" x2="11" y2="13"/>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                  </svg>
+                </button>
+              </div>
+            </form>
+
+            <div class="input-hint-row">
+              <div class="hint-item">
+                <kbd>Enter</kbd> to send • <kbd>Shift + Enter</kbd> for new line
+              </div>
+              <div class="hint-item" id="inputDocNotice">
+                No document loaded
+              </div>
+            </div>
+          </div>
+        </footer>
+      </main>
+    </div>
+  </div>
+
+  <!-- Citation Excerpt Modal -->
+  <div class="modal-backdrop" id="citationModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-icon">🔍</span>
+          <div>
+            <h3 id="modalPageTitle">Source Citation — Page 1</h3>
+            <span class="modal-sub" id="modalSimilarity">Match Relevance: 92.4%</span>
+          </div>
+        </div>
+        <button type="button" class="btn-close-modal" id="closeCitationModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-chunk-box" id="modalChunkText">
+          Excerpt content will appear here…
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-ghost" id="copyCitationBtn">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+          <span>Copy Excerpt</span>
+        </button>
+        <button type="button" class="btn-primary" id="doneCitationBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification System -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- External Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highlight.js@11/highlight.min.js"></script>
+
+  <!-- Application Logic -->
+  <script src="/static/script.js"></script>
+</body>
+</html>
